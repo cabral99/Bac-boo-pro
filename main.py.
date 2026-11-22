@@ -1,0 +1,45 @@
+
+import json
+import os
+import urllib.request
+
+TOKEN = os.environ.get("BOT_TOKEN")
+BASE = f"https://api.telegram.org/bot{TOKEN}/"
+
+def enviar(chat_id, mensagem):
+    dados = json.dumps({
+        "chat_id": chat_id,
+        "text": mensagem
+    }).encode()
+
+    req = urllib.request.Request(
+        BASE + "sendMessage",
+        data=dados,
+        headers={"Content-Type": "application/json"}
+    )
+    urllib.request.urlopen(req)
+
+def responder(texto):
+    if texto == "/start":
+        return "🤖 BAC BO PRO iniciado!\nUsa /sinal ou /estatisticas"
+    if texto == "/sinal":
+        return "📊 BAC BO PRO\nAinda sem dados suficientes para análise. Nenhuma entrada recomendada."
+    if texto == "/estatisticas":
+        return "📈 Estatísticas disponíveis quando adicionares resultados."
+    return "Comando desconhecido. Usa /start."
+
+offset = 0
+
+while True:
+    try:
+        req = urllib.request.urlopen(BASE + f"getUpdates?offset={offset+1}&timeout=30")
+        dados = json.loads(req.read())
+
+        for update in dados["result"]:
+            offset = update["update_id"]
+            msg = update.get("message", {})
+            if "text" in msg:
+                enviar(msg["chat"]["id"], responder(msg["text"].strip()))
+
+    except Exception as erro:
+        print("Erro:", erro)
